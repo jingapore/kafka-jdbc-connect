@@ -43,8 +43,20 @@ class JdbcSinkConnector : SinkConnector() {
             )
             .define(ConfigKeys.SCHEMA, ConfigDef.Type.STRING, "public", ConfigDef.Importance.MEDIUM, "Target schema")
             .define(ConfigKeys.TABLE, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, "Target table")
-            .define(ConfigKeys.PAYLOAD_COLUMN, ConfigDef.Type.STRING, "payload", ConfigDef.Importance.MEDIUM, "Column to store payload")
-            .define(ConfigKeys.BATCH_SIZE, ConfigDef.Type.INT, 200, ConfigDef.Importance.LOW, "Max records per batch/transaction")
+            .define(
+                ConfigKeys.PAYLOAD_COLUMN,
+                ConfigDef.Type.STRING,
+                "payload",
+                ConfigDef.Importance.MEDIUM,
+                "Column to store payload"
+            )
+            .define(
+                ConfigKeys.BATCH_SIZE,
+                ConfigDef.Type.INT,
+                200,
+                ConfigDef.Importance.LOW,
+                "Max records per batch/transaction"
+            )
     }
 
     override fun version(): String = "0.1.0"
