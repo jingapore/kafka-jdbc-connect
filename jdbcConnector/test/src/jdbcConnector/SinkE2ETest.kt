@@ -67,7 +67,7 @@ class SinkE2ETest {
         db.createTable(table)
 
         val baseCfg = linkedMapOf(
-            "connector.class" to "jdbcConnector.SinkConnector",
+            "connector.class" to "jdbcConnector.JdbcSinkConnector",
             "tasks.max" to "1",
             "topics" to "events-topic"
         )
