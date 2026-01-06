@@ -16,11 +16,6 @@ import java.nio.file.Path
 import java.time.Duration
 import java.util.Properties
 
-/**
- * Generalised E2E harness: Kafka broker container + Kafka Connect container + DB adapter verification.
- *
- * Start with RedshiftAdapter (real endpoint). Later: add PostgresAdapter/MySqlAdapter, etc.
- */
 @EnabledIfEnvironmentVariable(named = "REDSHIFT_JDBC_URL", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "REDSHIFT_USER", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "REDSHIFT_PASSWORD", matches = ".+")
@@ -28,27 +23,19 @@ class SinkE2ETest {
 
     private val http = HttpClient.newHttpClient()
     private val network = Network.newNetwork()
-
-    private val kafka = KafkaContainer(DockerImageName.parse("apache/kafka:3.8.1"))
+    private val kafka = KafkaContainer(DockerImageName.parse("apache/kafka:3.7.1"))
         .withNetwork(network)
         .withNetworkAliases("kafka")
-
     private lateinit var connect: GenericContainer<*>
-
-    // Start with Redshift; later you can parameterise via JUnit @MethodSource
     private val db: DbAdapter = RedshiftAdapter()
-
     private lateinit var table: String
 
     @BeforeEach
     fun setup() {
         kafka.start()
-
-        // IMPORTANT: you must mount a plugin artifact that contains your connector + its deps.
-        // If you don't build a fat jar, mount a whole directory of jars instead.
+        // dependency on build artifacts
         val pluginJarOnHost = Path.of("out/jdbcConnector/assemble.dest/out.jar").toAbsolutePath()
-
-        connect = GenericContainer(DockerImageName.parse("confluentinc/cp-kafka-connect:7.6.1"))
+        connect = GenericContainer(DockerImageName.parse("confluentinc/cp-kafka-connect:7.5.6"))
             .withNetwork(network)
             .withNetworkAliases("connect")
             .withExposedPorts(8083)
@@ -75,13 +62,11 @@ class SinkE2ETest {
         connect.start()
         waitForConnectHealthy()
 
-        // DB prep
         table = db.newTableName()
         db.createTable(table)
 
-        // Register connector
         val baseCfg = linkedMapOf(
-            "connector.class" to "example.connect.redshift.RedshiftSinkConnector",
+            "connector.class" to "jdbcConnector.SinkConnector",
             "tasks.max" to "1",
             "topics" to "events-topic"
         )
@@ -137,7 +122,7 @@ class SinkE2ETest {
             } catch (_: Exception) {}
             Thread.sleep(250)
         }
-        Assertions.fail("Kafka Connect REST never became healthy")
+        fail("Kafka Connect REST never became healthy")
     }
 
     private fun createConnector(name: String, config: Map<String, String>) {
@@ -151,7 +136,7 @@ class SinkE2ETest {
 
         val resp = http.send(req, HttpResponse.BodyHandlers.ofString())
         if (resp.statusCode() !in 200..299 && resp.statusCode() != 409) {
-            Assertions.fail("Failed to create connector. status=${resp.statusCode()} body=${resp.body()}")
+            fail("Failed to create connector. status=${resp.statusCode()} body=${resp.body()}")
         }
     }
 
@@ -169,7 +154,7 @@ class SinkE2ETest {
             }
             Thread.sleep(500)
         }
-        Assertions.fail("Connector $name did not reach RUNNING")
+        fail("Connector $name did not reach RUNNING")
     }
 
     private fun buildConnectorJson(name: String, config: Map<String, String>): String {

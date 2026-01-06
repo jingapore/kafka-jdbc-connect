@@ -11,7 +11,8 @@ object jdbcConnector extends KotlinModule {
 
   object test extends KotlinTests, TestModule.Junit5 {
     def mvnDeps = Seq(
-      mvn"org.testcontainers:testcontainers-junit-jupiter:2.0.2"
+      mvn"org.testcontainers:testcontainers-junit-jupiter:2.0.2",
+      mvn"org.testcontainers:kafka:1.21.4"
     )
   }
 }
