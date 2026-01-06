@@ -15,6 +15,7 @@ import java.net.http.HttpResponse
 import java.nio.file.Path
 import java.time.Duration
 import java.util.Properties
+import jdbcConnector.utils.*
 
 @EnabledIfEnvironmentVariable(named = "REDSHIFT_JDBC_URL", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "REDSHIFT_USER", matches = ".+")
