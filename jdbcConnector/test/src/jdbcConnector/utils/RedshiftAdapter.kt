@@ -47,12 +47,11 @@ class RedshiftAdapter : DbAdapter {
     }
 
     override fun connectorConfig(table: String): Map<String, String> = mapOf(
-        // These keys match the connector code I showed earlier:
-        "redshift.jdbc.url" to jdbcUrl,
-        "redshift.jdbc.user" to user,
-        "redshift.jdbc.password" to password,
-        "redshift.schema" to schema,
-        "redshift.table" to table
+        "jdbc.url" to jdbcUrl,
+        "jdbc.user" to user,
+        "jdbc.password" to password,
+        "schema" to schema,
+        "table" to table
     )
 
     private fun env(k: String): String =

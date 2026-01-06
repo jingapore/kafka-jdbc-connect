@@ -39,13 +39,11 @@ class SinkE2ETest {
     fun setup() {
         kafka.start()
         // dependency on build artifacts
-        println("Current Working Directory: " + System.getProperty("user.dir"))
         val pluginJarOnHost = PathUtils.getAssemblyJar().toAbsolutePath()
         val file = pluginJarOnHost.toFile()
         if (!file.exists() || file.length() == 0L) {
             fail("Plugin JAR is missing or empty at $pluginJarOnHost. Run ./mill jdbcConnector.assembly first.")
         }
-        println("don")
         connect = GenericContainer(DockerImageName.parse("confluentinc/cp-kafka-connect:7.5.6"))
             .withNetwork(network)
             .withNetworkAliases("connect")
@@ -64,7 +62,6 @@ class SinkE2ETest {
             .withEnv("CONNECT_VALUE_CONVERTER", "org.apache.kafka.connect.json.JsonConverter")
             .withEnv("CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE", "false")
             .withEnv("CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE", "false")
-            .withEnv("CONNECT_LOG4J_LOGGERS", "org.apache.kafka.connect.runtime.isolation=DEBUG")
             // https://github.com/confluentinc/kafka-images/blob/776bb19f8f256e62432ce48cd14b53cf261de85b/kafka-connect-base/Dockerfile.ubi9#L73
             .withEnv(
                 "CONNECT_PLUGIN_PATH",
