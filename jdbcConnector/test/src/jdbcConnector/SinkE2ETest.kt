@@ -1,8 +1,13 @@
+import jdbcConnector.utils.DbAdapter
+import jdbcConnector.utils.RedshiftAdapter
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
+import org.junit.jupiter.api.fail
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.Network
 import org.testcontainers.kafka.KafkaContainer
@@ -12,9 +17,8 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.nio.file.Path
 import java.time.Duration
-import java.util.Properties
+import java.util.*
 import jdbcConnector.utils.*
 
 @EnabledIfEnvironmentVariable(named = "REDSHIFT_JDBC_URL", matches = ".+")
@@ -35,7 +39,13 @@ class SinkE2ETest {
     fun setup() {
         kafka.start()
         // dependency on build artifacts
-        val pluginJarOnHost = Path.of("out/jdbcConnector/assembly.dest/out.jar").toAbsolutePath()
+        println("Current Working Directory: " + System.getProperty("user.dir"))
+        val pluginJarOnHost = PathUtils.getAssemblyJar().toAbsolutePath()
+        val file = pluginJarOnHost.toFile()
+        if (!file.exists() || file.length() == 0L) {
+            fail("Plugin JAR is missing or empty at $pluginJarOnHost. Run ./mill jdbcConnector.assembly first.")
+        }
+        println("don")
         connect = GenericContainer(DockerImageName.parse("confluentinc/cp-kafka-connect:7.5.6"))
             .withNetwork(network)
             .withNetworkAliases("connect")
@@ -54,13 +64,19 @@ class SinkE2ETest {
             .withEnv("CONNECT_VALUE_CONVERTER", "org.apache.kafka.connect.json.JsonConverter")
             .withEnv("CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE", "false")
             .withEnv("CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE", "false")
-            .withEnv("CONNECT_PLUGIN_PATH", "/usr/share/java,/usr/share/confluent-hub-components,/usr/share/java/my-plugins")
+            .withEnv("CONNECT_LOG4J_LOGGERS", "org.apache.kafka.connect.runtime.isolation=DEBUG")
+            // https://github.com/confluentinc/kafka-images/blob/776bb19f8f256e62432ce48cd14b53cf261de85b/kafka-connect-base/Dockerfile.ubi9#L73
+            .withEnv(
+                "CONNECT_PLUGIN_PATH",
+                "/usr/share/java,/usr/share/confluent-hub-components,/usr/share/java/my-plugins"
+            )
             .withCopyFileToContainer(
                 MountableFile.forHostPath(pluginJarOnHost),
-                "/usr/share/java/my-plugins/my-connector.jar"
+                "/usr/share/java/my-plugins/jdbc-connector/out.jar"
             )
 
         connect.start()
+        println(connect.getLogs())
         waitForConnectHealthy()
 
         table = db.newTableName()
@@ -79,10 +95,22 @@ class SinkE2ETest {
 
     @AfterEach
     fun teardown() {
-        try { db.dropTable(table) } catch (_: Exception) {}
-        try { connect.stop() } catch (_: Exception) {}
-        try { kafka.stop() } catch (_: Exception) {}
-        try { network.close() } catch (_: Exception) {}
+        try {
+            db.dropTable(table)
+        } catch (_: Exception) {
+        }
+        try {
+            connect.stop()
+        } catch (_: Exception) {
+        }
+        try {
+            kafka.stop()
+        } catch (_: Exception) {
+        }
+        try {
+            network.close()
+        } catch (_: Exception) {
+        }
     }
 
     @Test
@@ -120,7 +148,8 @@ class SinkE2ETest {
                     .build()
                 val resp = http.send(req, HttpResponse.BodyHandlers.ofString())
                 if (resp.statusCode() in 200..299) return
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             Thread.sleep(250)
         }
         fail("Kafka Connect REST never became healthy")
