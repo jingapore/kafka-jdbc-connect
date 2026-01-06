@@ -1,5 +1,8 @@
 package jdbcConnector.utils
 
+import java.sql.DriverManager
+import java.util.UUID
+
 class RedshiftAdapter : DbAdapter {
     override val name: String = "redshift"
     override val driverClassName: String = "com.amazon.redshift.Driver"

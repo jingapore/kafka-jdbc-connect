@@ -2,7 +2,7 @@ package jdbcConnector.sink
 
 import jdbcConnector.util.CommonConfigKeys
 
-object SinkConfigKeys {
+object ConfigKeys {
     const val JDBC_URL = CommonConfigKeys.JDBC_URL
     const val JDBC_USER = CommonConfigKeys.JDBC_USER
     const val JDBC_PASSWORD = CommonConfigKeys.JDBC_PASSWORD
