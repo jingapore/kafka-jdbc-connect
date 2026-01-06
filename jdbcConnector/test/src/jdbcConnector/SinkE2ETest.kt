@@ -35,7 +35,7 @@ class SinkE2ETest {
     fun setup() {
         kafka.start()
         // dependency on build artifacts
-        val pluginJarOnHost = Path.of("out/jdbcConnector/assemble.dest/out.jar").toAbsolutePath()
+        val pluginJarOnHost = Path.of("out/jdbcConnector/assembly.dest/out.jar").toAbsolutePath()
         connect = GenericContainer(DockerImageName.parse("confluentinc/cp-kafka-connect:7.5.6"))
             .withNetwork(network)
             .withNetworkAliases("connect")
