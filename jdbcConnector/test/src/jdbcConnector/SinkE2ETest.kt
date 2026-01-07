@@ -20,6 +20,8 @@ import java.net.http.HttpResponse
 import java.time.Duration
 import java.util.*
 import jdbcConnector.utils.*
+import org.testcontainers.containers.output.Slf4jLogConsumer
+import org.slf4j.LoggerFactory
 
 @EnabledIfEnvironmentVariable(named = "REDSHIFT_JDBC_URL", matches = ".+")
 @EnabledIfEnvironmentVariable(named = "REDSHIFT_USER", matches = ".+")
@@ -33,6 +35,7 @@ class SinkE2ETest {
         .withNetworkAliases("kafka")
     private lateinit var connect: GenericContainer<*>
     private val db: DbAdapter = RedshiftAdapter()
+    private val logConsumer: Slf4jLogConsumer = Slf4jLogConsumer(LoggerFactory.getLogger(SinkE2ETest::class.java))
     private lateinit var table: String
 
     @BeforeEach
@@ -71,9 +74,10 @@ class SinkE2ETest {
                 MountableFile.forHostPath(pluginJarOnHost),
                 "/usr/share/java/my-plugins/jdbc-connector/out.jar"
             )
+            .withLogConsumer(logConsumer)
 
         connect.start()
-        println(connect.getLogs())
+
         waitForConnectHealthy()
 
         table = db.newTableName()
@@ -124,6 +128,7 @@ class SinkE2ETest {
             put("key.serializer", StringSerializer::class.java.name)
             put("value.serializer", StringSerializer::class.java.name)
         }
+        // `use` is a shorthand to ensure we close the producer
         KafkaProducer<String, String>(props).use { p ->
             for ((k, v) in pairs) p.send(ProducerRecord(topic, k, v)).get()
             p.flush()
