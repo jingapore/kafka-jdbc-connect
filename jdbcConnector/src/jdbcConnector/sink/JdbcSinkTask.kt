@@ -1,6 +1,8 @@
 package jdbcConnector.sink
 
 import jdbcConnector.util.ConfigUtil
+import org.apache.kafka.clients.consumer.OffsetAndMetadata
+import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
@@ -133,5 +135,11 @@ class JdbcSinkTask : SinkTask() {
 
             else -> value.toString()
         }
+    }
+
+    // TODO: flush because we might be stuck if put returns nothing (and write test scenario for that)
+    // check that offsets had been committed before removing, similar to what we did with s3
+    override fun preCommit(currentOffsets: Map<TopicPartition?, OffsetAndMetadata?>?): Map<TopicPartition?, OffsetAndMetadata?>? {
+        return super.preCommit(currentOffsets)
     }
 }

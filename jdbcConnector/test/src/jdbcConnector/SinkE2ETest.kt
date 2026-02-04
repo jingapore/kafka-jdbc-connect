@@ -116,8 +116,12 @@ class SinkE2ETest {
 
     @Test
     fun `sink writes produced kafka records into db`() {
-        produce("events-topic", listOf("k1" to "hello", "k2" to "world", "k3" to db.name))
-        db.awaitRowCount(table, expected = 3, timeout = Duration.ofMinutes(2))
+        produce("events-topic",   listOf(
+            "\"k1\"" to """{"k":"hello","v":"world"}""",
+            "\"k2\"" to """{"k":"hello","v":"world"}""",
+            "\"k3\"" to """{"k":"hello","v":"world"}"""
+        ))
+        db.awaitRowCount(table, expected = 3, timeout = Duration.ofSeconds(30))
     }
 
     // ---------- Kafka produce ----------

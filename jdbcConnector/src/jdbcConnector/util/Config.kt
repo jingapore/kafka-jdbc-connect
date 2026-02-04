@@ -1,5 +1,7 @@
 package jdbcConnector.util
 
+import org.apache.kafka.common.config.ConfigDef
+
 object CommonConfigKeys {
     const val JDBC_URL = "jdbc.url"
     const val JDBC_USER = "jdbc.user"
@@ -18,3 +20,5 @@ object ConfigUtil {
     fun optionalInt(props: Map<String, String>, key: String, default: Int): Int =
         props[key]?.toIntOrNull() ?: default
 }
+
+data class ConfigField<T>(val name: String, val default_val: T, val doc: String);
