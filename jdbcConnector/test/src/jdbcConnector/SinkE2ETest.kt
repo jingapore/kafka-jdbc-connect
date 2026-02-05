@@ -1,3 +1,5 @@
+package jdbcConnector
+
 import jdbcConnector.utils.DbAdapter
 import jdbcConnector.utils.RedshiftAdapter
 import org.apache.kafka.clients.producer.KafkaProducer
