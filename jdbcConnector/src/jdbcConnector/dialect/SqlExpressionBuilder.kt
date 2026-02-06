@@ -9,7 +9,7 @@ class SqlExpressionBuilder(private val quoteChar: String) {
         sb.append(quoteChar).append(name).append(quoteChar)
     }
 
-    fun appendList(items: List<String>, delimiter: String = ", ", transform: SqlExpressionBuilder.(String) -> Unit) =
+    fun <T> appendList(items: Iterable<T>, delimiter: String = ", ", transform: SqlExpressionBuilder.(T) -> Unit) =
         apply {
             items.forEachIndexed { index, item ->
                 if (index > 0) append(delimiter)

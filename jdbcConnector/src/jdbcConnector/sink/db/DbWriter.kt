@@ -4,6 +4,7 @@ import com.example.kafka.dialect.DatabaseDialect
 import com.example.kafka.dialect.TableId
 import jdbcConnector.sink.JdbcSinkConfig
 import jdbcConnector.util.MemoryManager
+import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTaskContext
@@ -12,7 +13,6 @@ import java.sql.DriverManager
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
-import org.apache.kafka.clients.consumer.OffsetAndMetadata
 
 class DbWriter(
     private val config: JdbcSinkConfig,
@@ -125,7 +125,7 @@ class DbWriter(
             // 4. Resume consumption if needed
             if (pausedPartitions.isNotEmpty()) {
                 log.info("Buffer flushed. Resuming partitions: $pausedPartitions")
-                context.resume(pausedPartitions.toTypedArray())
+                context.resume(*pausedPartitions.toTypedArray())
                 pausedPartitions.clear()
             }
         } catch (e: Exception) {

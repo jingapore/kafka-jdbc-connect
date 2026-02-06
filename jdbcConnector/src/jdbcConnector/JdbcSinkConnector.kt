@@ -21,4 +21,12 @@ class JdbcSinkConnector : SinkConnector() {
 
     override fun config(): ConfigDef = JdbcSinkConfig.CONFIG_DEF
 
+    override fun stop() {
+
+    }
+
+    override fun version(): String {
+        return "1.0.0"
+    }
+
 }
