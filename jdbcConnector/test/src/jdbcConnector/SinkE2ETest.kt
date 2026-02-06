@@ -2,14 +2,16 @@ package jdbcConnector
 
 import jdbcConnector.utils.DbAdapter
 import jdbcConnector.utils.RedshiftAdapter
+import org.apache.kafka.clients.admin.AdminClient
+import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.json.JsonConverter
-import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -47,6 +49,7 @@ class SinkE2ETest {
     @BeforeEach
     fun setup() {
         kafka.start()
+        createTopic("events-topic")
         val jarPathString = System.getenv("TEST_PLUGIN_JAR_PATH")
         val pluginJarOnHost = java.nio.file.Paths.get(jarPathString).toAbsolutePath()
         val file = pluginJarOnHost.toFile()
@@ -62,7 +65,7 @@ class SinkE2ETest {
             .withEnv("CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR", "1")
             .withEnv("CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR", "1")
             .withEnv("CONNECT_STATUS_STORAGE_REPLICATION_FACTOR", "1")
-            .withEnv("CONNECT_KEY_CONVERTER", "org.apache.kafka.connect.json.JsonConverter")
+            .withEnv("CONNECT_KEY_CONVERTER", "org.apache.kafka.connect.storage.StringConverter")
             .withEnv("CONNECT_VALUE_CONVERTER", "org.apache.kafka.connect.json.JsonConverter")
             .withEnv("CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE", "false")
             .withEnv("CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE", "true")
@@ -87,6 +90,16 @@ class SinkE2ETest {
 
         createConnector("sink-it", cfg)
         waitForConnectorRunning("sink-it")
+    }
+
+    private fun createTopic(topicName: String) {
+        val props = Properties()
+        props["bootstrap.servers"] = kafka.bootstrapServers
+
+        AdminClient.create(props).use { admin ->
+            val newTopic = NewTopic(topicName, 1, 1.toShort())
+            admin.createTopics(listOf(newTopic)).all().get()
+        }
     }
 
     @AfterEach

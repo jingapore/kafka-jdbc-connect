@@ -38,6 +38,7 @@ class JdbcSinkTask : SinkTask() {
     override fun preCommit(
         currentOffsets: Map<TopicPartition, OffsetAndMetadata>?
     ): Map<TopicPartition, OffsetAndMetadata> {
+        writer.triggerFlushIfRequired()
         val flushedOffsets = writer.getCommittableOffsets() ?: emptyMap()
         if (flushedOffsets.isNotEmpty()) {
             log.debug("Committing offsets for {} partitions", flushedOffsets.size)

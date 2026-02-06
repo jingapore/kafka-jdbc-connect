@@ -42,9 +42,7 @@ class DbWriter(
             checkBackpressure(record)
         }
 
-        if (shouldFlush()) {
-            flushAll()
-        }
+        triggerFlushIfRequired()
     }
 
     private fun ensureTableReady(tableId: TableId, record: SinkRecord) {
@@ -70,6 +68,12 @@ class DbWriter(
             }
         }
         knownTables.add(tableId)
+    }
+
+    fun triggerFlushIfRequired() {
+        if (shouldFlush()) {
+            flushAll()
+        }
     }
 
     private fun executeDdl(sql: String) {
