@@ -1,0 +1,217 @@
+package jdbcConnector
+
+import jdbcConnector.utils.DbAdapter
+import jdbcConnector.utils.RedshiftAdapter
+import org.apache.kafka.clients.admin.AdminClient
+import org.apache.kafka.clients.admin.NewTopic
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.serialization.ByteArraySerializer
+import org.apache.kafka.common.serialization.StringSerializer
+import org.apache.kafka.connect.data.Schema
+import org.apache.kafka.connect.data.SchemaBuilder
+import org.apache.kafka.connect.data.Struct
+import org.apache.kafka.connect.json.JsonConverter
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
+import org.junit.jupiter.api.fail
+import org.slf4j.LoggerFactory
+import org.testcontainers.containers.GenericContainer
+import org.testcontainers.containers.Network
+import org.testcontainers.containers.output.Slf4jLogConsumer
+import org.testcontainers.kafka.KafkaContainer
+import org.testcontainers.utility.DockerImageName
+import org.testcontainers.utility.MountableFile
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
+import java.util.*
+
+@EnabledIfEnvironmentVariable(named = "TEST_PLUGIN_JAR_PATH", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "REDSHIFT_JDBC_URL", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "REDSHIFT_USER", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "REDSHIFT_PASSWORD", matches = ".+")
+class SinkE2ETest {
+
+    private val http = HttpClient.newHttpClient()
+    private val network = Network.newNetwork()
+    private val kafka =
+        KafkaContainer(DockerImageName.parse("apache/kafka:3.7.1")).withNetwork(network).withNetworkAliases("kafka")
+    private lateinit var connect: GenericContainer<*>
+    private val db: DbAdapter = RedshiftAdapter()
+    private val logConsumer: Slf4jLogConsumer = Slf4jLogConsumer(LoggerFactory.getLogger(SinkE2ETest::class.java))
+    val topicName: String = "testevents"
+    private val table: String = topicName
+
+
+    @BeforeEach
+    fun setup() {
+        kafka.start()
+        createTopic(topicName)
+        val jarPathString = System.getenv("TEST_PLUGIN_JAR_PATH")
+        val pluginJarOnHost = java.nio.file.Paths.get(jarPathString).toAbsolutePath()
+        val file = pluginJarOnHost.toFile()
+        if (!file.exists() || file.length() == 0L) {
+            fail("Plugin JAR is missing or empty at $pluginJarOnHost. Did 'assembly' run?")
+        }
+        connect = GenericContainer(DockerImageName.parse("confluentinc/cp-kafka-connect:7.5.6")).withNetwork(network)
+            .withNetworkAliases("connect").withExposedPorts(8083).withEnv("CONNECT_BOOTSTRAP_SERVERS", "kafka:9092")
+            .withEnv("CONNECT_REST_ADVERTISED_HOST_NAME", "connect").withEnv("CONNECT_REST_PORT", "8083")
+            .withEnv("CONNECT_GROUP_ID", "it-connect").withEnv("CONNECT_CONFIG_STORAGE_TOPIC", "connect-configs")
+            .withEnv("CONNECT_OFFSET_STORAGE_TOPIC", "connect-offsets")
+            .withEnv("CONNECT_STATUS_STORAGE_TOPIC", "connect-status")
+            .withEnv("CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR", "1")
+            .withEnv("CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR", "1")
+            .withEnv("CONNECT_STATUS_STORAGE_REPLICATION_FACTOR", "1")
+            .withEnv("CONNECT_KEY_CONVERTER", "org.apache.kafka.connect.storage.StringConverter")
+            .withEnv("CONNECT_VALUE_CONVERTER", "org.apache.kafka.connect.json.JsonConverter")
+            .withEnv("CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE", "false")
+            .withEnv("CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE", "true")
+            // https://github.com/confluentinc/kafka-images/blob/776bb19f8f256e62432ce48cd14b53cf261de85b/kafka-connect-base/Dockerfile.ubi9#L73
+            .withEnv(
+                "CONNECT_PLUGIN_PATH", "/usr/share/java,/usr/share/confluent-hub-components,/usr/share/java/my-plugins"
+            ).withCopyFileToContainer(
+                MountableFile.forHostPath(pluginJarOnHost), "/usr/share/java/my-plugins/jdbc-connector/out.jar"
+            ).withLogConsumer(logConsumer)
+
+        connect.start()
+
+        waitForConnectHealthy()
+
+//        db.createTable(topicName)
+
+        val baseCfg = linkedMapOf(
+            "connector.class" to "jdbcConnector.JdbcSinkConnector", "tasks.max" to "1", "topics" to topicName
+        )
+        val cfg = baseCfg + db.connectorConfig(table)
+
+        createConnector("sink-it", cfg)
+        waitForConnectorRunning("sink-it")
+    }
+
+    private fun createTopic(topicName: String) {
+        val props = Properties()
+        props["bootstrap.servers"] = kafka.bootstrapServers
+
+        AdminClient.create(props).use { admin ->
+            val newTopic = NewTopic(topicName, 1, 1.toShort())
+            admin.createTopics(listOf(newTopic)).all().get()
+        }
+    }
+
+    @AfterEach
+    fun teardown() {
+        try {
+            db.dropTable(table)
+        } catch (_: Exception) {
+        }
+        try {
+            connect.stop()
+        } catch (_: Exception) {
+        }
+        try {
+            kafka.stop()
+        } catch (_: Exception) {
+        }
+        try {
+            network.close()
+        } catch (_: Exception) {
+        }
+    }
+
+    @Test
+    fun `sink writes produced kafka records into db`() {
+        val schema = SchemaBuilder.struct().name("com.example.Event") // Optional name
+            .field("k", Schema.STRING_SCHEMA).field("v", Schema.STRING_SCHEMA).build()
+
+        val records = kotlin.collections.listOf(
+            Struct(schema).put("k", "k1").put("v", "world"),
+            Struct(schema).put("k", "k2").put("v", "world"),
+            Struct(schema).put("k", "k3").put("v", "world"),
+            Struct(schema).put("k", "k4").put("v", "world")
+        )
+
+        produceWithSchema(topicName, schema, records)
+
+        db.awaitTableToExist(table, timeout=Duration.ofSeconds(60))
+        db.awaitRowCount(table, expected = 3, timeout = Duration.ofSeconds(120))
+    }
+
+    private fun produceWithSchema(topic: String, schema: Schema, structs: List<Struct>) {
+        val jsonConverter = JsonConverter()
+        jsonConverter.configure(
+            mapOf("schemas.enable" to true, "converter.type" to "value"), false
+        )
+
+        val props = Properties().apply {
+            put("bootstrap.servers", kafka.bootstrapServers)
+            put("acks", "all")
+            put("key.serializer", StringSerializer::class.java.name)
+            put("value.serializer", ByteArraySerializer::class.java.name)
+        }
+
+        KafkaProducer<String, ByteArray>(props).use { producer ->
+            structs.forEach { struct ->
+                val valueBytes = jsonConverter.fromConnectData(topic, schema, struct)
+                val key = struct.get("k").toString()
+                producer.send(ProducerRecord(topic, key, valueBytes)).get()
+            }
+            producer.flush()
+        }
+    }
+
+
+    private fun connectBaseUrl(): String = "http://${connect.host}:${connect.getMappedPort(8083)}"
+
+    private fun waitForConnectHealthy() {
+        val duration = Duration.ofMinutes(2)
+        val deadline = System.nanoTime() + duration.toNanos()
+        while (System.nanoTime() < deadline) {
+            try {
+                val req = HttpRequest.newBuilder().uri(URI.create("${connectBaseUrl()}/connectors"))
+                    .timeout(Duration.ofSeconds(2)).GET().build()
+                val resp = http.send(req, HttpResponse.BodyHandlers.ofString())
+                if (resp.statusCode() in 200..299) return
+            } catch (_: Exception) {
+            }
+            Thread.sleep(250)
+        }
+        fail("Kafka Connect REST never became healthy after ${duration.toSeconds()} seconds")
+    }
+
+    private fun createConnector(name: String, config: Map<String, String>) {
+        val json = buildConnectorJson(name, config)
+        val req =
+            HttpRequest.newBuilder().uri(URI.create("${connectBaseUrl()}/connectors")).timeout(Duration.ofSeconds(10))
+                .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json)).build()
+
+        val resp = http.send(req, HttpResponse.BodyHandlers.ofString())
+        if (resp.statusCode() !in 200..299 && resp.statusCode() != 409) {
+            fail("Failed to create connector. status=${resp.statusCode()} body=${resp.body()}")
+        }
+    }
+
+    private fun waitForConnectorRunning(name: String) {
+        val deadline = System.nanoTime() + Duration.ofMinutes(2).toNanos()
+        while (System.nanoTime() < deadline) {
+            val req = HttpRequest.newBuilder().uri(URI.create("${connectBaseUrl()}/connectors/$name/status"))
+                .timeout(Duration.ofSeconds(5)).GET().build()
+            val resp = http.send(req, HttpResponse.BodyHandlers.ofString())
+            if (resp.statusCode() in 200..299) {
+                if (resp.body().contains("\"state\":\"RUNNING\"")) return
+            }
+            Thread.sleep(500)
+        }
+        fail("Connector $name did not reach RUNNING")
+    }
+
+    private fun buildConnectorJson(name: String, config: Map<String, String>): String {
+        fun esc(s: String) = s.replace("\\", "\\\\").replace("\"", "\\\"")
+        val cfgJson = config.entries.joinToString(",") { "\"${esc(it.key)}\":\"${esc(it.value)}\"" }
+        return """{"name":"${esc(name)}","config":{${cfgJson}}}"""
+    }
+}

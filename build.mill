@@ -1,0 +1,35 @@
+package build
+
+import mill.*
+import mill.kotlinlib.*
+
+object jdbcConnector extends KotlinModule {
+  def kotlinVersion = "2.3.0"
+
+  def mvnDeps = Seq(
+    mvn"com.amazon.redshift:redshift-jdbc42:2.2.1",
+    mvn"org.apache.logging.log4j:log4j-slf4j2-impl:2.24.3"
+  )
+
+  def compileMvnDeps = Seq(
+    mvn"org.apache.kafka:connect-api:4.1.0",
+  )
+
+  object test extends KotlinTests, TestModule.Junit5 {
+
+    def forkEnv = Task {
+      super.forkEnv() ++ Map(
+        "TEST_PLUGIN_JAR_PATH" -> assembly().path.toString
+      )
+    }
+
+    def mvnDeps = Seq(
+      mvn"org.testcontainers:testcontainers-junit-jupiter:2.0.2",
+      mvn"org.testcontainers:kafka:1.21.4",
+      mvn"org.apache.kafka:kafka-clients:3.5.1",
+      mvn"org.apache.kafka:connect-api:3.5.1",
+      mvn"org.apache.logging.log4j:log4j-slf4j2-impl:2.24.3",
+      mvn"org.apache.kafka:connect-json:3.5.1"
+    )
+  }
+}
