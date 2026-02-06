@@ -26,9 +26,6 @@ class TableBuffer(
 
     fun flush(connection: java.sql.Connection): Map<TopicPartition, Long> {
         if (records.isEmpty()) return emptyMap()
-
-        // 1. Calculate Offsets BEFORE clearing records
-        // We do this first so we have the metadata ready
         val flushedOffsets = mutableMapOf<TopicPartition, Long>()
         records.forEach { record ->
             val tp = TopicPartition(record.topic(), record.kafkaPartition())

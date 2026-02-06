@@ -1,7 +1,8 @@
 package jdbcConnector.utils
 
+import jdbcConnector.sink.JdbcSinkConfig
 import java.sql.DriverManager
-import java.util.UUID
+import java.util.*
 
 class RedshiftAdapter : DbAdapter {
     override val name: String = "redshift"
@@ -47,11 +48,10 @@ class RedshiftAdapter : DbAdapter {
     }
 
     override fun connectorConfig(table: String): Map<String, String> = mapOf(
-        "jdbc.url" to jdbcUrl,
-        "jdbc.user" to user,
-        "jdbc.password" to password,
-        "schema" to schema,
-        "table" to table
+        JdbcSinkConfig.CONNECTION_URL to jdbcUrl,
+        JdbcSinkConfig.CONNECTION_USER to user,
+        JdbcSinkConfig.CONNECTION_PASSWORD to password,
+        JdbcSinkConfig.TARGET_SCHEMA to schema,
     )
 
     private fun env(k: String): String =

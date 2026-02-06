@@ -15,9 +15,7 @@ import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 
 class DbWriter(
-    private val config: JdbcSinkConfig,
-    private val context: SinkTaskContext,
-    private val dialect: DatabaseDialect
+    private val config: JdbcSinkConfig, private val context: SinkTaskContext, private val dialect: DatabaseDialect
 ) {
     private val log = LoggerFactory.getLogger(DbWriter::class.java)
 
@@ -106,23 +104,15 @@ class DbWriter(
     private fun flushAll() {
         try {
             buffers.values.forEach { buffer ->
-                // 1. Atomic Flush + Clear
-                // If this succeeds, buffer is empty and we have our offsets
                 val batchOffsets = buffer.flush(connection)
-
-                // 2. Update the "Safe to Commit" map
                 batchOffsets.forEach { (tp, offset) ->
-                    // Merge: Keep the highest offset seen so far
                     committableOffsets.merge(tp, offset) { old, new -> kotlin.math.max(old, new) }
                 }
             }
 
-            // 3. Commit the DB Transaction
-            // Only now is the data durably saved
             connection.commit()
             lastFlushTime = Instant.now()
 
-            // 4. Resume consumption if needed
             if (pausedPartitions.isNotEmpty()) {
                 log.info("Buffer flushed. Resuming partitions: $pausedPartitions")
                 context.resume(*pausedPartitions.toTypedArray())
@@ -131,29 +121,21 @@ class DbWriter(
         } catch (e: Exception) {
             log.error("Flush failed, rolling back", e)
             connection.rollback()
-            // Important: We do NOT clear buffers here.
-            // We want them to remain full so the framework can retry the 'put' call
-            // or fail the task without losing data.
             throw e
         }
     }
 
     fun getCommittableOffsets(): Map<TopicPartition, OffsetAndMetadata> {
         val offsetsToCommit = mutableMapOf<TopicPartition, OffsetAndMetadata>()
-
         val iterator = committableOffsets.iterator()
         while (iterator.hasNext()) {
             val entry = iterator.next()
             val tp = entry.key
             val maxOffset = entry.value
-
-            // Kafka expects the "next" offset (last_written + 1)
+            // TODO: write test case to ensure that kafka expects maxOffset + 1
             offsetsToCommit[tp] = OffsetAndMetadata(maxOffset + 1)
-
-            // Remove from map once reported.
             iterator.remove()
         }
-
         return offsetsToCommit
     }
 

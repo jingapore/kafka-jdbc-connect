@@ -18,7 +18,7 @@ object PathUtils {
     fun getAssemblyJar(): Path {
         val jar = getProjectRoot().resolve("out/jdbcConnector/assembly.dest/out.jar")
         if (!Files.exists(jar) || Files.size(jar) == 0L) {
-            throw IllegalStateException("Assembly JAR not found or empty at $jar. Run './mill jdbcConnector.assembly' first.")
+            throw IllegalStateException("Assembly JAR not found or empty at $jar.")
         }
         return jar
     }

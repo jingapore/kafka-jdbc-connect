@@ -1,4 +1,4 @@
-package jdbc
+package jdbcConnector
 
 import jdbcConnector.sink.JdbcSinkConfig
 import jdbcConnector.sink.JdbcSinkTask

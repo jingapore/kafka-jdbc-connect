@@ -37,11 +37,14 @@ class RedshiftDialect : DatabaseDialect {
             Schema.Type.INT8, Schema.Type.INT16 -> "SMALLINT"
             Schema.Type.INT32 -> "INTEGER"
             Schema.Type.INT64 -> "BIGINT"
-            Schema.Type.FLOAT32 -> "REAL"
-            Schema.Type.FLOAT64 -> "DOUBLE PRECISION"
+            Schema.Type.FLOAT32 -> "FLOAT4"
+            Schema.Type.FLOAT64 -> "FLOAT8"
             Schema.Type.BOOLEAN -> "BOOLEAN"
-            Schema.Type.STRING -> "VARCHAR(MAX)" // Redshift prefers specific lengths, but MAX is safe generic
-            else -> "VARCHAR(MAX)"
+            Schema.Type.STRING -> "VARCHAR(MAX)"
+            Schema.Type.BYTES -> "VARBYTE"
+            Schema.Type.ARRAY -> "SUPER"
+            Schema.Type.MAP -> "SUPER"
+            Schema.Type.STRUCT -> "SUPER"
         }
     }
 
