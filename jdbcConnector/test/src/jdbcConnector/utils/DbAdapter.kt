@@ -5,7 +5,6 @@ interface DbAdapter {
     val name: String
     val driverClassName: String
     val schema: String
-    fun newTableName(): String
     fun createTable(table: String)
     fun dropTable(table: String)
     fun rowCount(table: String): Int

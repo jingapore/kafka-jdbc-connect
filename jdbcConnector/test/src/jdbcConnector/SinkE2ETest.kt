@@ -44,12 +44,14 @@ class SinkE2ETest {
     private lateinit var connect: GenericContainer<*>
     private val db: DbAdapter = RedshiftAdapter()
     private val logConsumer: Slf4jLogConsumer = Slf4jLogConsumer(LoggerFactory.getLogger(SinkE2ETest::class.java))
-    private lateinit var table: String
+    val topicName: String = "testevents"
+    private val table: String = topicName
+
 
     @BeforeEach
     fun setup() {
         kafka.start()
-        createTopic("events-topic")
+        createTopic(topicName)
         val jarPathString = System.getenv("TEST_PLUGIN_JAR_PATH")
         val pluginJarOnHost = java.nio.file.Paths.get(jarPathString).toAbsolutePath()
         val file = pluginJarOnHost.toFile()
@@ -80,11 +82,10 @@ class SinkE2ETest {
 
         waitForConnectHealthy()
 
-        table = db.newTableName()
-        db.createTable(table)
+//        db.createTable(topicName)
 
         val baseCfg = linkedMapOf(
-            "connector.class" to "jdbcConnector.JdbcSinkConnector", "tasks.max" to "1", "topics" to "events-topic"
+            "connector.class" to "jdbcConnector.JdbcSinkConnector", "tasks.max" to "1", "topics" to topicName
         )
         val cfg = baseCfg + db.connectorConfig(table)
 
@@ -133,7 +134,7 @@ class SinkE2ETest {
             Struct(schema).put("k", "k3").put("v", "world")
         )
 
-        produceWithSchema("events-topic", schema, records)
+        produceWithSchema(topicName, schema, records)
 
         db.awaitRowCount(table, expected = 3, timeout = Duration.ofSeconds(120))
     }

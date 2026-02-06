@@ -2,7 +2,6 @@ package jdbcConnector.utils
 
 import jdbcConnector.sink.JdbcSinkConfig
 import java.sql.DriverManager
-import java.util.*
 
 class RedshiftAdapter : DbAdapter {
     override val name: String = "redshift"
@@ -13,8 +12,6 @@ class RedshiftAdapter : DbAdapter {
     private val user: String = env("REDSHIFT_USER")
     private val password: String = env("REDSHIFT_PASSWORD")
 
-    override fun newTableName(): String =
-        "it_kc_${UUID.randomUUID().toString().replace("-", "")}"
 
     override fun createTable(table: String) {
         Class.forName(driverClassName)
@@ -52,6 +49,8 @@ class RedshiftAdapter : DbAdapter {
         JdbcSinkConfig.CONNECTION_USER to user,
         JdbcSinkConfig.CONNECTION_PASSWORD to password,
         JdbcSinkConfig.TARGET_SCHEMA to schema,
+        JdbcSinkConfig.AUTO_CREATE to "true",
+        JdbcSinkConfig.AUTO_EVOLVE to "true"
     )
 
     private fun env(k: String): String =
