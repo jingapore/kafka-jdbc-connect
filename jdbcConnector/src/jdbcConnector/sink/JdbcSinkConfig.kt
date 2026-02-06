@@ -39,7 +39,7 @@ class JdbcSinkConfig(props: Map<String, String>) : AbstractConfig(CONFIG_DEF, pr
             .define(FLUSH_SIZE, Type.INT, 100, Importance.MEDIUM, "Flush threshold (records)")
             .define(FLUSH_INTERVAL_MS, Type.LONG, 10000L, Importance.MEDIUM, "Flush threshold (time)")
             .define(MAX_BUFFER_HEAP_RATIO, Type.DOUBLE, 0.05, Importance.LOW, "Max heap usage ratio for buffer")
-            .define(AUTO_CREATE, Type.BOOLEAN, true, Importance.MEDIUM, "Auto create tables")
-            .define(AUTO_EVOLVE, Type.BOOLEAN, true, Importance.MEDIUM, "Auto add missing columns")
+            .define(AUTO_CREATE, Type.BOOLEAN, true, Importance.HIGH, "Auto create tables")
+            .define(AUTO_EVOLVE, Type.BOOLEAN, true, Importance.HIGH, "Auto add missing columns")
     }
 }

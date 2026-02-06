@@ -35,6 +35,7 @@ class DbWriter(
 
     fun write(records: Collection<SinkRecord>) {
         records.forEach { record ->
+            log.info("Writing ${record.topic()} ${record.value()}")
             val tableId = TableId(config.targetSchema, record.topic())
             ensureTableReady(tableId, record)
             val buffer = buffers.getOrPut(tableId) { TableBuffer(tableId, dialect, memoryManager) }
@@ -49,6 +50,7 @@ class DbWriter(
         if (tableId in knownTables) return
 
         if (!dialect.tableExists(connection, tableId)) {
+            log.info("table $tableId does not exist")
             if (config.autoCreate) {
                 val sql = dialect.buildCreateTableStatement(tableId, record.valueSchema())
                 executeDdl(sql)
@@ -57,6 +59,7 @@ class DbWriter(
                 throw RuntimeException("Table $tableId does not exist and auto-create is off")
             }
         } else if (config.autoEvolve) {
+            log.info("table exists and we are in auto evolve")
             val dbColumns = dialect.getTableColumns(connection, tableId)
             val recordFields = record.valueSchema().fields().map { it.name() }
             val missing = recordFields.filter { !dbColumns.contains(it) }

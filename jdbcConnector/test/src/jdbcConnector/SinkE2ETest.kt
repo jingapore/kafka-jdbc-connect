@@ -131,11 +131,13 @@ class SinkE2ETest {
         val records = kotlin.collections.listOf(
             Struct(schema).put("k", "k1").put("v", "world"),
             Struct(schema).put("k", "k2").put("v", "world"),
-            Struct(schema).put("k", "k3").put("v", "world")
+            Struct(schema).put("k", "k3").put("v", "world"),
+            Struct(schema).put("k", "k4").put("v", "world")
         )
 
         produceWithSchema(topicName, schema, records)
 
+        db.awaitTableToExist(table, timeout=Duration.ofSeconds(60))
         db.awaitRowCount(table, expected = 3, timeout = Duration.ofSeconds(120))
     }
 

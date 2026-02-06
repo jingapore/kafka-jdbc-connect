@@ -1,5 +1,6 @@
 package jdbcConnector.utils
 import java.time.Duration
+import java.util.concurrent.TimeoutException
 
 interface DbAdapter {
     val name: String
@@ -17,6 +18,19 @@ interface DbAdapter {
             Thread.sleep(500)
         }
         throw AssertionError("[$name] Timed out waiting for $expected rows; lastSeen=$last table=$schema.$table")
+    }
+
+    fun awaitTableToExist(table: String, timeout: Duration) {
+        val deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos()
+        while (System.nanoTime() < deadline) {
+            try {
+                awaitRowCount(table, 0, Duration.ofMillis(1000))
+                return
+            } catch (_: Exception) {
+                Thread.sleep(1000)
+            }
+        }
+        throw TimeoutException("[$name] Timed out waiting for table=$schema.$table")
     }
 
     fun connectorConfig(table: String): Map<String, String>
