@@ -1,7 +1,7 @@
-package jdbcConnector
+package dev.jingsong.kafkaJdbcConnector
 
-import jdbcConnector.utils.DbAdapter
-import jdbcConnector.utils.RedshiftAdapter
+import dev.jingsong.kafkaJdbcConnector.utils.DbAdapter
+import dev.jingsong.kafkaJdbcConnector.utils.RedshiftAdapter
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.producer.KafkaProducer

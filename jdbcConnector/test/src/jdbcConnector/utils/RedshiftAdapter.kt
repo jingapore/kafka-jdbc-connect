@@ -1,4 +1,4 @@
-package jdbcConnector.utils
+package dev.jingsong.kafkaJdbcConnector.utils
 
 import jdbcConnector.sink.JdbcSinkConfig
 import java.sql.DriverManager

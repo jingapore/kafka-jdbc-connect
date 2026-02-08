@@ -1,19 +1,65 @@
+//| mvnDeps: ["com.lihaoyi::mill-contrib-versionfile:$MILL_VERSION"]
 package build
 
 import mill.*
+import mill.contrib.versionfile.VersionFileModule
+import mill.javalib.SonatypeCentralPublishModule
+import mill.javalib.publish.*
 import mill.kotlinlib.*
+import mill.kotlinlib.publish.{Developer, License}
+import os.Path
 
-object jdbcConnector extends KotlinModule {
+object versionFile extends VersionFileModule {
+  def moduleDir: Path = mill.api.BuildCtx.workspaceRoot
+
+  def currentVersionString: Task.Simple[String] = Task {
+    currentVersion().toString
+  }
+}
+
+object jdbcConnector extends KotlinModule with SonatypeCentralPublishModule {
   def kotlinVersion = "2.3.0"
+
+  def artifactName = "kafkaJdbcConnector"
+
+  def publishVersion = versionFile.currentVersionString()
+
 
   def mvnDeps = Seq(
     mvn"com.amazon.redshift:redshift-jdbc42:2.2.1",
-    mvn"org.apache.logging.log4j:log4j-slf4j2-impl:2.24.3"
+    mvn"org.apache.logging.log4j:log4j-slf4j2-impl:2.24.3",
   )
 
   def compileMvnDeps = Seq(
     mvn"org.apache.kafka:connect-api:4.1.0",
   )
+
+  def generateBuildInfo = Task {
+    val version = publishVersion()
+    val outputDir = Task.dest / "dev" / "jingsong" / "kafkaJdbcConnector"
+    os.makeDir.all(outputDir)
+
+    val fileContent =
+      s"""
+        package dev.jingsong.kafkaJdbcConnector
+
+        object BuildInfo {
+          const val version = "$version"
+        }
+      """
+
+    os.write.over(outputDir / "BuildInfo.kt", fileContent)
+    Seq(PathRef(Task.dest))
+  }
+
+  def generatedSources = Task {
+    super.generatedSources() ++ generateBuildInfo()
+  }
+
+  def pomSettings = PomSettings(description = "A Kafka Connect for JDBC written in Kotlin",
+    organization = "dev.jingsong", url = "https://github.com/jingapore/kafka-jdbc-connect",
+    licenses = Seq(License.MIT), versionControl = VersionControl.github("jingapore", "kafka-connect-jdbc"),
+    developers = Seq(Developer("jingapore", "JS", "https://jingsong.dev")))
 
   object test extends KotlinTests, TestModule.Junit5 {
 

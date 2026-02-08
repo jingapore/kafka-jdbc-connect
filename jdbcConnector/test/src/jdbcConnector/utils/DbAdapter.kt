@@ -1,4 +1,4 @@
-package jdbcConnector.utils
+package dev.jingsong.kafkaJdbcConnector.utils
 import java.time.Duration
 import java.util.concurrent.TimeoutException
 

@@ -1,7 +1,7 @@
-package jdbcConnector
+package dev.jingsong.kafkaJdbcConnector
 
-import jdbcConnector.sink.JdbcSinkConfig
-import jdbcConnector.sink.JdbcSinkTask
+import dev.jingsong.kafkaJdbcConnector.sink.JdbcSinkConfig
+import dev.jingsong.kafkaJdbcConnector.sink.JdbcSinkTask
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.sink.SinkConnector
@@ -26,7 +26,7 @@ class JdbcSinkConnector : SinkConnector() {
     }
 
     override fun version(): String {
-        return "1.0.0"
+        return BuildInfo.version
     }
 
 }

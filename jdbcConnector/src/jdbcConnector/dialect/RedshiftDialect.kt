@@ -1,7 +1,7 @@
-package jdbcConnector.dialect
+package dev.jingsong.kafkaJdbcConnector.dialect
 
-import com.example.kafka.dialect.DatabaseDialect
-import com.example.kafka.dialect.TableId
+import dev.jingsong.kafkaJdbcConnector.dialect.DatabaseDialect
+import dev.jingsong.kafkaJdbcConnector.dialect.TableId
 import org.apache.kafka.connect.data.Schema
 
 class RedshiftDialect : DatabaseDialect {

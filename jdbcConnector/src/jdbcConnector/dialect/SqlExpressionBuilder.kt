@@ -1,4 +1,4 @@
-package jdbcConnector.dialect
+package dev.jingsong.kafkaJdbcConnector.dialect
 
 class SqlExpressionBuilder(private val quoteChar: String) {
     private val sb = StringBuilder()

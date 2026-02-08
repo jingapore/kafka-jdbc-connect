@@ -1,4 +1,4 @@
-package jdbcConnector.util
+package dev.jingsong.kafkaJdbcConnector.util
 
 import org.apache.kafka.connect.sink.SinkRecord
 import org.slf4j.LoggerFactory

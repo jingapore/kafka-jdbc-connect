@@ -48,3 +48,5 @@ mill-assembly.jar
 mill-native
 *.mill.orig
 *.mill.rej
+
+*.iml

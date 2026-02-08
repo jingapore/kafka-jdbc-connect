@@ -1,4 +1,4 @@
-package jdbcConnector
+package dev.jingsong.kafkaJdbcConnector
 
 class SqlExpressionBuilderTest {
 }

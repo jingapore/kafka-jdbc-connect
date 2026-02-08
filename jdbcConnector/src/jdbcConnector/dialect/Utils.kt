@@ -1,4 +1,4 @@
-package com.example.kafka.dialect
+package dev.jingsong.kafkaJdbcConnector.dialect
 
 import org.apache.kafka.connect.data.Schema
 

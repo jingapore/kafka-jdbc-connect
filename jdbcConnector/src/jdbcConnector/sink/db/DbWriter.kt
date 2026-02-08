@@ -1,9 +1,9 @@
-package jdbcConnector.sink.db
+package dev.jingsong.kafkaJdbcConnector.sink.db
 
-import com.example.kafka.dialect.DatabaseDialect
-import com.example.kafka.dialect.TableId
-import jdbcConnector.sink.JdbcSinkConfig
-import jdbcConnector.util.MemoryManager
+import dev.jingsong.kafkaJdbcConnector.dialect.DatabaseDialect
+import dev.jingsong.kafkaJdbcConnector.dialect.TableId
+import dev.jingsong.kafkaJdbcConnector.sink.JdbcSinkConfig
+import dev.jingsong.kafkaJdbcConnector.util.MemoryManager
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.connect.sink.SinkRecord

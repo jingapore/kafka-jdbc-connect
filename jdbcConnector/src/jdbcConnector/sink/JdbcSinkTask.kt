@@ -1,6 +1,7 @@
-package jdbcConnector.sink
+package dev.jingsong.kafkaJdbcConnector.sink
 
-import jdbcConnector.sink.db.DbWriter
+import dev.jingsong.kafkaJdbcConnector.sink.db.DbWriter
+import dev.jingsong.kafkaJdbcConnector.BuildInfo
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.connect.errors.ConnectException
@@ -17,7 +18,7 @@ class JdbcSinkTask : SinkTask() {
         try {
             val config = JdbcSinkConfig(props)
             // TODO: find the best dialect given the conn string
-            writer = DbWriter(config, context, jdbcConnector.dialect.RedshiftDialect())
+            writer = DbWriter(config, context, dev.jingsong.kafkaJdbcConnector.dialect.RedshiftDialect())
         } catch (e: Exception) {
             throw ConnectException("Failed to start JdbcSinkTask", e)
         }
@@ -47,6 +48,6 @@ class JdbcSinkTask : SinkTask() {
     }
 
     override fun version(): String {
-        return "1.0.0"
+        return BuildInfo.version
     }
 }
